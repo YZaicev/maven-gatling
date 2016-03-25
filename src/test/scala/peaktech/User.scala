@@ -4,15 +4,17 @@ import io.gatling.core.Predef._
 import io.gatling.http.Predef._
 
 object User {
-	val login = exec(http("/user/login")
-		.post("/user/login")
-		.body(RawFileBody("login.json")).asJSON
-		.check(status.is(200))
-		.check(jsonPath("$..token").saveAs("token"))
-		.check(jsonPath("$..user").ofType[Any].saveAs("user")))
+	def login =
+		exec(http("login")
+			.post("/account/login_user")
+			.body(RawFileBody("login.json")).asJSON
+      .header("Authorization", session => Http.getAuthorizationHeader(""))
+			.check(status.is(200))
+      .check(header("Authorization").saveAs("auth")))
 
-	val checkProfile = exec(http("profile")
-		.get("/user/${user.id}")
-		.header("Authorization", "Bearer ${token}")
-		.check(status.is(200)))
+  val getAccount =
+    exec(http("get account")
+    .get("/account")
+    .header("Authorization", session => Http.getAuthorizationHeader(session("auth").as[String]))
+    .check(status.is(200)))
 }

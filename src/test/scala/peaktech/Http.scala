@@ -1,19 +1,47 @@
 package peaktech
 
-import io.gatling.core.Predef._
+import java.util.Calendar
+
 import io.gatling.http.Predef._
+import sun.misc.BASE64Encoder
+
+import scala.language.postfixOps
 
 object Http {
 	var url = System.getProperty("url")
+	val consumerSecret = "fd7660e213150"
 
 	if (url == null) {
-		url = "http://staging.xn--90aiim0b4c.xn--e1afgsrt.xn--p1ai"
+		url = "https://vtqa.lfconnect.com/web/api"
 	}
 
 	val protocol = http
 		.baseURL(url)
-		.acceptLanguageHeader("en-US,en;q=0.5")
-    	.acceptEncodingHeader("gzip, deflate")
-    	.acceptHeader("application/json, text/plain, */*")
-    	.userAgentHeader("Mozilla/5.0 (Macintosh; Intel Mac OS X 10.8; rv:16.0) Gecko/20100101 Firefox/16.0")
+		.headers(
+			Map("Content-Type" -> "application/json",
+				"Accept" -> "application/json")
+		)
+
+	def getAuthorizationHeader(auth: String): String = {
+		val today = Calendar.getInstance().getTime
+		val timestamp = math.ceil(today.getTime / 1000).toInt
+
+		val rnd = new scala.util.Random
+		val range = 0 to 100000
+		val nonce = range(rnd.nextInt(range length))
+
+		val notAuthorizedHeader = "oauth_consumer_key=\"SILVERTREE\",oauth_timestamp=\"" +
+			timestamp + "\",oauth_nonce=\"" + nonce + "\""
+
+		val tokenSecret = auth.replaceAll(".*oauth_token_secret=\"(.*)\"", "$1")
+
+		if (auth.length > 0) {
+			return auth.replaceAll(", ", ",")
+				.replaceAll(",oauth_token_secret=\"(.*)\"", "")
+				.replaceAll("oauth_signature=\"(.*)\",", "") +
+				"," + notAuthorizedHeader + ",oauth_signature=\"" + new BASE64Encoder().encode((consumerSecret + "&" + tokenSecret).getBytes).replace("\n", "") + "\""
+		}
+
+		"OAuth " + notAuthorizedHeader + ",oauth_signature=\"ZmQ3NjYwZTIxMzE1MA==\""
+	}
 }
